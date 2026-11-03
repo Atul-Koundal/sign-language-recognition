@@ -10,3 +10,4 @@ Code/val_images
 Code/val_labels
 Code/test_images
 Code/test_labels
+Code/*.keras
