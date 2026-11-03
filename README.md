@@ -92,3 +92,6 @@ The original authors report over 95% accuracy on 44 ASL characters. My own resul
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Gesture images and labels come from the original author's release:
+EvilPort2/Sign-Language 1.0, https://zenodo.org/records/1244279
