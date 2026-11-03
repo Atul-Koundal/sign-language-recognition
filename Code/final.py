@@ -1,10 +1,9 @@
 import cv2, pickle
 import numpy as np
 import tensorflow as tf
-from cnn_tf import cnn_model_fn
 import os
 import sqlite3, pyttsx3
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 from threading import Thread
 
 engine = pyttsx3.init()
