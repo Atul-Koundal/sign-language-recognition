@@ -2,3 +2,11 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+Code/gestures/
+Code/*.h5
+Code/train_images
+Code/train_labels
+Code/val_images
+Code/val_labels
+Code/test_images
+Code/test_labels
