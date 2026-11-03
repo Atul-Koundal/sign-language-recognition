@@ -39,7 +39,7 @@ def cnn_model():
 	model.add(Dense(num_of_classes, activation='softmax'))
 	sgd = optimizers.SGD(learning_rate=1e-2)
 	model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
-	filepath="cnn_model_keras2.h5"
+	filepath="cnn_model_keras2.keras"
 	checkpoint1 = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
 	callbacks_list = [checkpoint1]
 	#from keras.utils import plot_model
@@ -69,7 +69,7 @@ def train():
 	model.fit(train_images, train_labels, validation_data=(val_images, val_labels), epochs=15, batch_size=500, callbacks=callbacks_list)
 	scores = model.evaluate(val_images, val_labels, verbose=0)
 	print("CNN Error: %.2f%%" % (100-scores[1]*100))
-	#model.save('cnn_model_keras2.h5')
+	#model.save('cnn_model_keras2.keras')
 
 train()
 K.clear_session();
