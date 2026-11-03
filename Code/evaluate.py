@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay
 
+for name in ("cnn_model_keras2.keras", "test_images", "test_labels"):
+    if not os.path.exists(name):
+        raise SystemExit("ERROR: '%s' not found in %s. Run load_images.py and cnn_model_train.py first "
+                         "(from the Code/ folder)." % (name, os.getcwd()))
+
 model = load_model("cnn_model_keras2.keras")
 
 with open("test_images", "rb") as f:

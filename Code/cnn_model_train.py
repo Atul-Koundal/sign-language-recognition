@@ -11,13 +11,17 @@ from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras import backend as K
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def get_image_size():
-	img = cv2.imread('gestures/1/100.jpg', 0)
-	return img.shape
+	# Use the first image found, so this does not depend on a specific class folder existing.
+	paths = sorted(glob('gestures/*/*.jpg'))
+	if not paths:
+		raise SystemExit("ERROR: no images found in Code/gestures/<class_id>/*.jpg. Get the dataset "
+			"(Zenodo, see README) or record your own with create_gestures.py, then run "
+			"Rotate_images.py and load_images.py before training.")
+	return cv2.imread(paths[0], 0).shape
 
 def get_num_of_classes():
 	return len(glob('gestures/*'))
@@ -47,6 +51,9 @@ def cnn_model():
 	return model, callbacks_list
 
 def train():
+	for name in ("train_images", "train_labels", "val_images", "val_labels"):
+		if not os.path.exists(name):
+			raise SystemExit("ERROR: '%s' not found. Run load_images.py first." % name)
 	with open("train_images", "rb") as f:
 		train_images = np.array(pickle.load(f))
 	with open("train_labels", "rb") as f:
@@ -71,5 +78,5 @@ def train():
 	print("CNN Error: %.2f%%" % (100-scores[1]*100))
 	#model.save('cnn_model_keras2.keras')
 
-train()
-K.clear_session();
+if __name__ == "__main__":
+	train()

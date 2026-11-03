@@ -35,13 +35,15 @@ Many deaf and hard-of-hearing people depend on interpreters for everyday communi
 │   ├── load_images.py
 │   ├── display_gestures.py
 │   ├── cnn_model_train.py
+│   ├── evaluate.py
 │   ├── final.py
 │   ├── hist
-│   ├── gesture_db.db
-│   └── Install_Packages.txt
+│   └── gesture_db.db
 ├── img/            # demo images and screenshots
+│   └── results/    # confusion matrix written by evaluate.py
 ├── LICENSE
-└── README.md
+├── README.md
+└── requirements.txt
 ```
 
 ## Setup
@@ -54,6 +56,17 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+The pinned versions in `requirements.txt` are the ones this project was updated and tested against (TensorFlow 2.21 / Keras 3). On Linux, `pyttsx3` also needs a speech engine such as `espeak` (`sudo apt install espeak`).
+
+## Getting the data and a model
+
+The gesture images and the trained model are **not stored in this repository** (they are large and listed in `.gitignore`), so `train`, `evaluate` and `final.py` will not run on a fresh clone until you have them. You have two options:
+
+1. **Use the original dataset.** Download the EvilPort2/Sign-Language 1.0 release from [Zenodo](https://zenodo.org/records/1244279) and extract the gesture images so they sit at `Code/gestures/<class_id>/<n>.jpg` (one folder per class, numbered images 1-1200 in each).
+2. **Record your own.** Run `create_gestures.py` for each sign. `gesture_db.db` maps each class id to its label.
+
+Then run `Rotate_images.py`, `load_images.py` and `cnn_model_train.py` (see Usage). Training writes `cnn_model_keras2.keras`, which `evaluate.py` and `final.py` load. If you already have a trained `cnn_model_keras2.keras`, put it in `Code/` and `final.py` will run without the images, because the input size is read from the model itself.
+
 ## Usage
 
 Run these from inside the `Code/` folder:
@@ -64,9 +77,12 @@ python create_gestures.py      # capture and label gesture images
 python Rotate_images.py        # augment the images
 python load_images.py          # split into train / validation / test sets
 python display_gestures.py     # (optional) view the captured gestures
-python cnn_model_train.py      # train the model
+python cnn_model_train.py      # train the model -> cnn_model_keras2.keras
+python evaluate.py             # test-set accuracy, per-class report, confusion matrix
 python final.py                # start live recognition
 ```
+
+Keys in `final.py`: `q` quit, `v` toggle voice, `t` switch to calculator mode, `c` switch back to text mode.
 
 ## Demo
 
@@ -74,13 +90,21 @@ python final.py                # start live recognition
 
 ## Results
 
-The original authors report over 95% accuracy on 44 ASL characters. My training run on the EvilPort2 dataset reached 99.96% validation accuracy. This figure is optimistic, because flipped copies of the same image can land in both training and validation, and all images come from one signer. Live-test results and a test-set evaluation are below.
+The original authors report over 95% accuracy on 44 ASL characters. My training run on the EvilPort2 dataset reached 99.96% validation accuracy. This figure is optimistic, because flipped copies of the same image can land in both training and validation, and all images come from one signer. 
+
+### Test-set evaluation
+
+`evaluate.py` loads `cnn_model_keras2.keras`, scores it on the held-out test split, prints test accuracy and a per-class precision/recall report, and saves the confusion matrix:
+
+![Confusion matrix](img/results/confusion_matrix.png)
+
+The same caveat applies to the test split: `Rotate_images.py` adds a mirrored copy of every image and `load_images.py` shuffles all images before splitting, so a flipped copy of a training image can end up in the test set. Treat the test accuracy as an upper bound, not a measure of how it will do on a new signer or background.
 
 ## My changes
 
 - [x] Update the code for current TensorFlow / Keras versions
 - [ ] Record my own gesture dataset
-- [ ] Add evaluation (test accuracy, confusion matrix)
+- [x] Add evaluation (test accuracy, confusion matrix): `Code/evaluate.py`
 - [ ] Add new features or improvements
 
 ## Limitations
@@ -88,6 +112,7 @@ The original authors report over 95% accuracy on 44 ASL characters. My training 
 - Accuracy depends on lighting, background and camera quality.
 - It recognizes static signs only, not full continuous sign language.
 - It covers a limited vocabulary.
+- The train/validation/test split is random over images, not over signers or original-vs-flipped pairs (see Results).
 
 ## License
 

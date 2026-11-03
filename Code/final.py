@@ -6,10 +6,21 @@ import sqlite3, pyttsx3
 from tensorflow.keras.models import load_model
 from threading import Thread
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+MODEL_PATH = 'cnn_model_keras2.keras'
+
+def die(msg):
+	raise SystemExit("ERROR: " + msg)
+
+if not os.path.exists(MODEL_PATH):
+	die(MODEL_PATH + " not found in " + os.getcwd() + ". Run this script from the Code/ folder "
+		"after training (python cnn_model_train.py). See 'Getting the data and a model' in the README.")
+if not os.path.exists("hist"):
+	die("'hist' (hand histogram) not found. Run set_hand_histogram.py or use the one in the repo.")
+
 engine = pyttsx3.init()
 engine.setProperty('rate', 150)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-model = load_model('cnn_model_keras2.keras')
+model = load_model(MODEL_PATH)
 
 def get_hand_hist():
 	with open("hist", "rb") as f:
@@ -17,8 +28,9 @@ def get_hand_hist():
 	return hist
 
 def get_image_size():
-	img = cv2.imread('gestures/0/100.jpg', 0)
-	return img.shape
+	# Read the input size from the trained model so the dataset is not needed at run time.
+	_, height, width, _ = model.input_shape
+	return height, width
 
 image_x, image_y = get_image_size()
 
@@ -30,16 +42,18 @@ def keras_process_image(img):
 
 def keras_predict(model, image):
 	processed = keras_process_image(image)
-	pred_probab = model.predict(processed)[0]
+	pred_probab = model.predict(processed, verbose=0)[0]
 	pred_class = list(pred_probab).index(max(pred_probab))
 	return max(pred_probab), pred_class
 
 def get_pred_text_from_db(pred_class):
 	conn = sqlite3.connect("gesture_db.db")
-	cmd = "SELECT g_name FROM gesture WHERE g_id="+str(pred_class)
-	cursor = conn.execute(cmd)
+	cursor = conn.execute("SELECT g_name FROM gesture WHERE g_id=?", (int(pred_class),))
 	for row in cursor:
+		conn.close()
 		return row[0]
+	conn.close()
+	return ""
 
 def get_pred_from_contour(contour, thresh):
 	x1, y1, w1, h1 = cv2.boundingRect(contour)
@@ -317,5 +331,6 @@ def recognize():
 		else:
 			break
 
-keras_predict(model, np.zeros((50, 50), dtype = np.uint8))		
-recognize()
+if __name__ == "__main__":
+	keras_predict(model, np.zeros((50, 50), dtype = np.uint8))  # warm-up
+	recognize()
