@@ -1,59 +1,83 @@
 import cv2
+import os
+import pickle
+import random
 from glob import glob
 import numpy as np
-import random
-from sklearn.utils import shuffle
-import pickle
-import os
 
-def pickle_images_labels():
-	images_labels = []
-	images = glob("gestures/*/*.jpg")
-	images.sort()
-	for image in images:
-		print(image)
-		label = image[image.find(os.sep)+1: image.rfind(os.sep)]
-		img = cv2.imread(image, 0)
-		images_labels.append((np.array(img, dtype=np.uint8), int(label)))
-	return images_labels
+# Rotate_images.py writes the mirrored copy of image n as image n + FLIP_OFFSET.
+# Both copies must stay in the SAME split, otherwise the model is tested on
+# (a mirror of) images it was trained on.
+FLIP_OFFSET = 1200
+SEED = 42
+TRAIN_FRAC, TEST_FRAC = 5/6, 1/12   # validation gets the remaining 1/12
 
-images_labels = pickle_images_labels()
-images_labels = shuffle(shuffle(shuffle(shuffle(images_labels))))
-images, labels = zip(*images_labels)
-print("Length of images_labels", len(images_labels))
 
-train_images = images[:int(5/6*len(images))]
-print("Length of train_images", len(train_images))
-with open("train_images", "wb") as f:
-	pickle.dump(train_images, f)
-del train_images
+def source_id(path):
+	"""Id of the original image: a flipped copy maps back to the image it came from."""
+	n = int(os.path.splitext(os.path.basename(path))[0])
+	return n - FLIP_OFFSET if n > FLIP_OFFSET else n
 
-train_labels = labels[:int(5/6*len(labels))]
-print("Length of train_labels", len(train_labels))
-with open("train_labels", "wb") as f:
-	pickle.dump(train_labels, f)
-del train_labels
 
-test_images = images[int(5/6*len(images)):int(11/12*len(images))]
-print("Length of test_images", len(test_images))
-with open("test_images", "wb") as f:
-	pickle.dump(test_images, f)
-del test_images
+def label_of(path):
+	return int(os.path.basename(os.path.dirname(path)))
 
-test_labels = labels[int(5/6*len(labels)):int(11/12*len(images))]
-print("Length of test_labels", len(test_labels))
-with open("test_labels", "wb") as f:
-	pickle.dump(test_labels, f)
-del test_labels
 
-val_images = images[int(11/12*len(images)):]
-print("Length of test_images", len(val_images))
-with open("val_images", "wb") as f:
-	pickle.dump(val_images, f)
-del val_images
+def split_paths(paths, seed=SEED):
+	"""Split image paths into train/test/val per class, keeping each original
+	image and its mirrored copy together. Returns {"train": [...], "test": [...], "val": [...]}."""
+	groups = {}
+	for p in paths:
+		groups.setdefault((label_of(p), source_id(p)), []).append(p)
 
-val_labels = labels[int(11/12*len(labels)):]
-print("Length of val_labels", len(val_labels))
-with open("val_labels", "wb") as f:
-	pickle.dump(val_labels, f)
-del val_labels
+	by_label = {}
+	for (label, sid) in sorted(groups):
+		by_label.setdefault(label, []).append(sid)
+
+	rng = random.Random(seed)
+	out = {"train": [], "test": [], "val": []}
+	for label in sorted(by_label):
+		ids = by_label[label]
+		rng.shuffle(ids)
+		n = len(ids)
+		n_train, n_test = int(TRAIN_FRAC * n), int(TEST_FRAC * n)
+		parts = {"train": ids[:n_train], "test": ids[n_train:n_train + n_test], "val": ids[n_train + n_test:]}
+		for name, sids in parts.items():
+			for sid in sids:
+				out[name].extend(groups[(label, sid)])
+	return out
+
+
+def check_no_leakage(splits):
+	seen = {}
+	for name, paths in splits.items():
+		for p in paths:
+			key = (label_of(p), source_id(p))
+			if seen.setdefault(key, name) != name:
+				raise RuntimeError("Leak: %s is in both '%s' and '%s'" % (key, seen[key], name))
+
+
+def save(name, paths, rng):
+	paths = list(paths)
+	rng.shuffle(paths)
+	images, labels = [], []
+	for p in paths:
+		images.append(np.array(cv2.imread(p, 0), dtype=np.uint8))
+		labels.append(label_of(p))
+	print("Length of %s_images" % name, len(images))
+	with open(name + "_images", "wb") as f:
+		pickle.dump(tuple(images), f)
+	with open(name + "_labels", "wb") as f:
+		pickle.dump(tuple(labels), f)
+
+
+if __name__ == "__main__":
+	paths = sorted(glob("gestures/*/*.jpg"))
+	if not paths:
+		raise SystemExit("ERROR: no images found in Code/gestures/<class_id>/*.jpg. "
+			"See 'Getting the data and a model' in the README.")
+	splits = split_paths(paths)
+	check_no_leakage(splits)
+	rng = random.Random(SEED)
+	for name in ("train", "test", "val"):
+		save(name, splits[name], rng)

@@ -13,7 +13,7 @@ Many deaf and hard-of-hearing people depend on interpreters for everyday communi
 1. **Hand segmentation:** a hand histogram (`set_hand_histogram.py`) is used to separate the hand from the background.
 2. **Dataset creation:** `create_gestures.py` captures labelled gesture images from the webcam.
 3. **Augmentation:** `Rotate_images.py` flips the images to add variety.
-4. **Dataset split:** `load_images.py` splits the images into training, validation and test sets.
+4. **Dataset split:** `load_images.py` splits the images into training, validation and test sets (about 5/6, 1/12, 1/12). Each original image and its mirrored copy are kept in the same split, so the model is never tested on a flipped version of an image it trained on.
 5. **Training:** `cnn_model_train.py` trains a CNN (Conv2D + MaxPooling layers, dense layer, dropout, softmax) with Keras.
 6. **Live recognition:** `final.py` runs the webcam loop and shows the predicted sign.
 
@@ -90,7 +90,7 @@ Keys in `final.py`: `q` quit, `v` toggle voice, `t` switch to calculator mode, `
 
 ## Results
 
-The original authors report over 95% accuracy on 44 ASL characters. My training run on the EvilPort2 dataset reached 99.96% validation accuracy. This figure is optimistic, because flipped copies of the same image can land in both training and validation, and all images come from one signer. 
+The original authors report over 95% accuracy on 44 ASL characters. My first training run on the EvilPort2 dataset reached 99.96% validation accuracy (99.98% on the test set), but that run used a random split in which an image could be in the test set while its mirrored copy was in training, so it overstated how well the model generalizes. The split is now done per original image. All images still come from one signer, so the numbers say little about new signers, backgrounds or lighting. 
 
 ### Test-set evaluation
 
@@ -98,7 +98,7 @@ The original authors report over 95% accuracy on 44 ASL characters. My training 
 
 ![Confusion matrix](img/results/confusion_matrix.png)
 
-The same caveat applies to the test split: `Rotate_images.py` adds a mirrored copy of every image and `load_images.py` shuffles all images before splitting, so a flipped copy of a training image can end up in the test set. Treat the test accuracy as an upper bound, not a measure of how it will do on a new signer or background.
+`Rotate_images.py` adds a mirrored copy of every image. `load_images.py` splits by original image (seed 42, per class) and checks that no original/mirror pair crosses splits. Even so, all images come from one signer in one setting, so treat the test accuracy as an upper bound for a new signer or background.
 
 ## My changes
 
@@ -112,7 +112,7 @@ The same caveat applies to the test split: `Rotate_images.py` adds a mirrored co
 - Accuracy depends on lighting, background and camera quality.
 - It recognizes static signs only, not full continuous sign language.
 - It covers a limited vocabulary.
-- The train/validation/test split is random over images, not over signers or original-vs-flipped pairs (see Results).
+- The split is per original image, but not per signer: all images come from one person, so generalization to other signers is untested.
 
 ## License
 
