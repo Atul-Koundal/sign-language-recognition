@@ -51,7 +51,7 @@ git clone https://github.com/Atul-Koundal/sign-language-recognition.git
 cd sign-language-recognition
 python3 -m venv venv
 source venv/bin/activate
-pip install -r Code/Install_Packages.txt
+pip install -r requirements.txt
 ```
 
 ## Usage
@@ -74,11 +74,11 @@ python final.py                # start live recognition
 
 ## Results
 
-The original authors report over 95% accuracy on 44 ASL characters. My own results will be added here after training and evaluation.
+The original authors report over 95% accuracy on 44 ASL characters. My training run on the EvilPort2 dataset reached 99.96% validation accuracy. This figure is optimistic, because flipped copies of the same image can land in both training and validation, and all images come from one signer. Live-test results and a test-set evaluation are below.
 
 ## My changes
 
-- [ ] Update the code for current TensorFlow / Keras versions
+- [x] Update the code for current TensorFlow / Keras versions
 - [ ] Record my own gesture dataset
 - [ ] Add evaluation (test accuracy, confusion matrix)
 - [ ] Add new features or improvements
